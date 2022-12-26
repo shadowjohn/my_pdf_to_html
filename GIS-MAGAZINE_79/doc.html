@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src * 'self' data: gap://ready file:; style-src * 'unsafe-inline'; script-src * 'self' 'unsafe-inline' 'unsafe-eval'">
+  <script src="jquery-1.11.3.min.js"></script>      
+  <script src="myphp.js"></script>
+  <script src="include.js"></script>
+  
+  <script src="text.js"></script>
+  <script src="div.js"></script>
+  <script src="img.js"></script>
+  <script src="img_info.js"></script>  
+  <title></title>
+  <style>
+  html,body{
+    width:100%;
+    padding:0px;
+    margin:0px;
+    font-size:10px;
+    letter-spacing: -0.5px;        
+  }
+  *{
+    padding:0px;
+    margin:0px;
+  }
+  .page_class{
+    position:relative;
+    margin-left:auto;
+    margin-right:auto;
+    margin-top:10px;
+    margin-bottom:10px;
+    width:595px;
+    height:842px;
+    border:1px solid #000;    
+  }
+  </style>  
+</head>
+<body>
+</body>
+<script>
+  var max_page = 0;
+  var kinds = ['img_json','img_info_json','div_json','text_json'];
+  var kinds_obj = [];
+  for(var k in kinds)
+  {
+    kinds_obj[kinds[k]] = window[kinds[k]];
+    
+    for(var i in kinds_obj[kinds[k]])
+    {
+      //console.log(kinds_obj[k][i]);
+      max_page = (kinds_obj[kinds[k]][i]['page_num']>max_page)?kinds_obj[kinds[k]][i]['page_num']:max_page; 
+    }
+    
+  }
+  
+  
+  
+  //建置 div
+  //console.log(max_page);
+  for(var i=1,max_i=max_page;i<=max_page;i++)
+  {
+    $("body").append("<div req_page=\"page_"+i+"\" class='page_class'></div>");
+  }
+  for(var k in kinds_obj['img_json'])
+  {
+    
+    var o = kinds_obj['img_json'][k];    
+    console.log(o);
+    var oo = kinds_obj['img_info_json'][k];
+    console.log(oo); 
+    $("body div[req_page=\"page_"+o['page_num']+"\"]").append(`<img src="pic/${o['file_name']}" style="background-color:#fff;position:relative;left:${oo['x0']}px;top:${oo['y0']}px;width:${oo['width']}px;height:${oo['height']}px;z-index:0;">`);
+  }
+  
+  for(var k in kinds_obj['div_json'])
+  {
+    var o = kinds_obj['div_json'][k];
+    //console.log(o);
+    $("body div[req_page=\"page_"+o['page_num']+"\"]").append(``);
+  }
+  for(var k in kinds_obj['text_json'])
+  {
+    var o = kinds_obj['text_json'][k];
+    //console.log(o);
+    var w = o['width']*1.8;
+    var h = o['height']*3.3;    
+    $("body div[req_page=\"page_"+o['page_num']+"\"]").append(`<div style="line-height:${h}px;position:relative;left:${o['x0']}px;top:${o['y0']}px;width:${w}px;height:${h}px;z-index:2;">${o['text']}</div>`);
+  }
+</script>
+</html>
