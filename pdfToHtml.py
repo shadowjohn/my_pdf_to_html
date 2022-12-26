@@ -11,11 +11,13 @@ import pdfminer
 from pdfminer.image import ImageWriter
 from pdfminer.high_level import extract_pages
 from pdfminer.pdftypes import resolve_all, PDFObjRef
+from pdfminer.layout import LTImage
 from binascii import b2a_hex
 import sys
 import io
-from PIL import Image
+from PIL import Image, ImageOps
 import php
+import numpy as np
 my = php.kit()
 # From : https://stackoverflow.com/questions/22898145/how-to-extract-text-and-text-coordinates-from-a-pdf-file
 
@@ -237,6 +239,13 @@ def write_file (folder, filename, filedata, flags='w'):
         except IOError:
             pass
     return result
+def blend_value(under, over, a):
+    return (over*a + under*(255-a)) / 255
+
+def blend_rgba(under, over):
+    return tuple([blend_value(under[i], over[i], over[3]) for i in (0,1,2)] + [255])
+
+white = (255, 255, 255, 255)    
 def save_images_from_page(page: pdfminer.layout.LTPage,page_number):
     global img_info_infos
     global img_infos
@@ -281,6 +290,7 @@ def save_images_from_page(page: pdfminer.layout.LTPage,page_number):
     
     #img_info = []
     for image in images:
+        iw = ImageWriter(OUTPUT_PIC_PATH)
         #if len(image.colorspace) == 1 and isinstance(image.colorspace[0], PDFObjRef):
         #    image.colorspace = resolve_all(image.colorspace[0])
         #    if not isinstance(image.colorspace, list):
@@ -294,6 +304,7 @@ def save_images_from_page(page: pdfminer.layout.LTPage,page_number):
         im = None
         try:  
             im = Image.open(io.BytesIO(image.stream.get_data()))
+            
         except:
             #continue
             pass
@@ -311,14 +322,32 @@ def save_images_from_page(page: pdfminer.layout.LTPage,page_number):
         #print(d)
         img_infos.append(d)
         #im.save(OUTPUT_PIC_PATH + my.SP() + d["file_name"]);
-        try:
+        #print(im.mode)
+        #sys.exit()
+        #try:
+            
+        if im!=None and im.mode == 'CMYK':
             im = im.convert('RGBA')
-            im2 = im.copy()
-            im2.putalpha(180)
-            im.paste(im2, im)
-            im.save(OUTPUT_PIC_PATH + my.SP() + d["file_name"], "PNG", optimize=False)
-        except:
-            pass
+            x = np.array(im)
+            r, g, b, a = np.rollaxis(x, axis = -1)
+            r[a == 0] = 255
+            g[a == 0] = 255
+            b[a == 0] = 255
+            x = np.dstack([r, g, b, a])
+            im = Image.fromarray(x, 'RGBA')
+            im = im.convert('RGB')
+            im = ImageOps.invert(im)
+            im.save(OUTPUT_PIC_PATH + my.SP() + d["file_name"], "PNG", optimize=True)
+        elif im!=None:
+            im = im.convert('RGBA')            
+            im.save(OUTPUT_PIC_PATH + my.SP() + d["file_name"], "PNG", optimize=True)
+        elif isinstance(image, pdfminer.layout.LTImage):
+            
+            name = iw.export_image(image)            
+            my.rename(OUTPUT_PIC_PATH + my.SP() + name,OUTPUT_PIC_PATH + my.SP() + d["file_name"])
+            #print(name)
+            #sys.exit()
+        
         step = step + 1      
     #sys.exit()
     #return img_info    

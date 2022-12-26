@@ -113,7 +113,7 @@ class kit:
     def copy(self,source_file,target_file):
         import shutil
         shutil.copy(source_file,target_file)
-    def move(self,source_file,target_file):
+    def rename(self,source_file,target_file):
         import shutil
         shutil.move(source_file,target_file)
     def copy_all(self,source_dir,target_dir):
