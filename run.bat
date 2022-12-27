@@ -1,0 +1,1 @@
+C:\Python39-64\python.exe pdfToHtml.py -o gis97\doc.js -t html -O gis97 -s 1.5 GIS-MAGAZINE_79.pdf
