@@ -9,16 +9,14 @@
   
   <script src="text.js"></script>
   <script src="div.js"></script>
-  <script src="img.js"></script>
   <script src="img_info.js"></script>  
   <title></title>
   <style>
   html,body{
     width:100%;
     padding:0px;
-    margin:0px;
-    font-size:10px;
-    letter-spacing: -0.5px;        
+    margin:0px;    
+    /*letter-spacing: -0.5px;*/
   }
   *{
     padding:0px;
@@ -32,7 +30,8 @@
     margin-bottom:10px;
     width:595px;
     height:842px;
-    border:1px solid #000;    
+    display: block;	
+	box-shadow: 0 0 0.5cm rgba(0,0,0,0.5);	
   }
   </style>  
 </head>
@@ -40,7 +39,7 @@
 </body>
 <script>
   var max_page = 0;
-  var kinds = ['img_json','img_info_json','div_json','text_json'];
+  var kinds = ['img_info_json','div_json','text_json'];
   var kinds_obj = [];
   for(var k in kinds)
   {
@@ -62,29 +61,28 @@
   {
     $("body").append("<div req_page=\"page_"+i+"\" class='page_class'></div>");
   }
-  for(var k in kinds_obj['img_json'])
+  for(var k=0,max_k=kinds_obj['img_info_json'].length;k<max_k;k++)
   {
     
-    var o = kinds_obj['img_json'][k];    
-    console.log(o);
-    var oo = kinds_obj['img_info_json'][k];
-    console.log(oo); 
-    $("body div[req_page=\"page_"+o['page_num']+"\"]").append(`<img src="pic/${o['file_name']}" style="background-color:#fff;position:relative;left:${oo['x0']}px;top:${oo['y0']}px;width:${oo['width']}px;height:${oo['height']}px;z-index:0;">`);
+    var o = kinds_obj['img_info_json'][k];    
+    
+    $("body div[req_page=\"page_"+o['page_num']+"\"]").append(`<img src="pic/${o['file_name']}" style="background-color:#fff;position:relative;left:${o['x0']}px;top:${o['y0']}px;width:${o['width']}px;z-index:0;">`);
   }
   
-  for(var k in kinds_obj['div_json'])
+  for(var k=0,max_k=kinds_obj['div_json'].length;k<max_k;k++)
   {
     var o = kinds_obj['div_json'][k];
     //console.log(o);
     $("body div[req_page=\"page_"+o['page_num']+"\"]").append(``);
   }
-  for(var k in kinds_obj['text_json'])
+  for(var k=0,max_k=kinds_obj['text_json'].length;k<max_k;k++)
   {
     var o = kinds_obj['text_json'][k];
-    //console.log(o);
-    var w = o['width']*1.8;
-    var h = o['height']*3.3;    
-    $("body div[req_page=\"page_"+o['page_num']+"\"]").append(`<div style="line-height:${h}px;position:relative;left:${o['x0']}px;top:${o['y0']}px;width:${w}px;height:${h}px;z-index:2;">${o['text']}</div>`);
+    console.log(o);
+    var w = o['width']*1.4;
+    var h = o['height']*3.2;    
+    $("body div[req_page=\"page_"+o['page_num']+"\"]").append(`
+	<div style="position:relative;left:${o['x0']}px;top:${o['y0']}px;margin-top:1px;margin-bottom:1px;padding:2px;width:${w}px;height:${h}px;z-index:2;">${o['text']}</div>`);
   }
 </script>
 </html>

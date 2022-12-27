@@ -21,382 +21,318 @@ import numpy as np
 my = php.kit()
 # From : https://stackoverflow.com/questions/22898145/how-to-extract-text-and-text-coordinates-from-a-pdf-file
 
-div_infos = []
-text_infos = []
-img_infos = []
-img_info_infos = []
+# Use `pip3 install pdfminer.six` for python3
+import argparse
+import logging
+import sys
+from typing import Any, Container, Iterable, List, Optional
 
-def show_ltitem_hierarchy(o: Any, depth=0,_page_num=None):
-    global div_infos
-    global text_infos
-    global img_infos
-    """Show location and text of LTItem and all its descendants"""
-    global pages_img
-    #if depth == 0:
-    #    print('element                        x1  y1  x2  y2   text')
-    #    print('------------------------------ --- --- --- ---- -----')
+import pdfminer.high_level
+from pdfminer.layout import LAParams
+from pdfminer.utils import AnyIO
 
-    print(
-        f'{get_indented_name(o, depth):<30.30s} '
-        f'{get_optional_bbox(o)} '
-        f'{get_optional_text(o)}'
-    )
-    _text_kind = my.trim(get_indented_name(o, depth))
-    #print("_text_kind: %s\n" % (_text_kind))
-    _text = get_optional_text(o)
-    
-    if isinstance(o, Iterable):
-        page_num = 0;
-        if _page_num!=None:
-          page_num = _page_num
-        for i in o:
-            if depth == 0:
-                print("######################### PAGE ########################\nPage: %d\n" % (page_num+1))
-                save_images_from_page(pages_img[page_num],(page_num+1))
-                #img_infos = img_infos + img_info
-                page_num = page_num+1
-                if page_num > 10: 
-                    break
-                                     
-            show_ltitem_hierarchy(i, depth=depth + 1,_page_num=page_num)
-            
-                        
-            # ,'LTTextLineHorizontal','LTChar'            
-            if _text_kind in ['LTTextBoxHorizontal']:      
-                d = {                  
-                  "page_num": page_num-1, 
-                  "text_kind": _text_kind,
-                  "bbox": my.explode(" ",my.trim(get_optional_bbox(o))),
-                  "x0": float("%.2f" % ( get_optional_kind(o,"x0"))),
-                  "y0": float("%.2f" % ( get_optional_kind(o,"y0"))),
-                  "width": float("%.2f" % ( get_optional_kind(o,"width"))),
-                  "height": float("%.2f" % ( get_optional_kind(o,"height"))),
-                  "size": get_optional_kind(o,"size"),
-                  "fontname": get_optional_kind(o,"fontname"),
-                  "word_margin": get_optional_kind(o,"word_margin"),
-                  "ncs": get_optional_kind(o,"ncs"),
-                  "text": _text,
-                  "pageid": get_optional_kind(o,"pageid"),
-                  "rotate": get_optional_kind(o,"rotate") 
-                }
-                #print(dir(o))
-                if d not in text_infos:
-                    text_infos.append(d)
-            elif _text_kind in ['LTTextLineHorizontal','LTChar']:
-                pass
-            elif _text_kind in ['LTImageGG']:
-                d = {                  
-                  "page_num": page_num, 
-                  "text_kind": _text_kind,
-                  "bbox": my.explode(" ",my.trim(get_optional_bbox(o))),
-                  "x0": float("%.2f" % ( get_optional_kind(o,"x0"))),
-                  "y0": float("%.2f" % ( get_optional_kind(o,"y0"))),
-                  "width": float("%.2f" % ( get_optional_kind(o,"width"))),
-                  "height": float("%.2f" % ( get_optional_kind(o,"height"))),
-                  "size": get_optional_kind(o,"size"),
-                  "fontname": get_optional_kind(o,"fontname"),
-                  "word_margin": get_optional_kind(o,"word_margin"),
-                  "ncs": get_optional_kind(o,"ncs"),
-                  "text": _text,
-                  "pageid": get_optional_kind(o,"pageid"),
-                  "rotate": get_optional_kind(o,"rotate")  
-                }
-                img_info_infos.append(d)        
-            elif _text_kind in ['LTLine','LTRect']:
-                # 處理一些方框、顏色...
-                d = {                  
-                  "page_num": page_num, 
-                  "text_kind": _text_kind,
-                  "bbox": my.explode(" ",my.trim(get_optional_bbox(o))),
-                  "x0": float("%.2f" % ( get_optional_kind(o,"x0"))),
-                  "y0": float("%.2f" % ( get_optional_kind(o,"y0"))),
-                  "width": float("%.2f" % ( get_optional_kind(o,"width"))),
-                  "height": float("%.2f" % ( get_optional_kind(o,"height"))),
-                  "size": get_optional_kind(o,"size"),
-                  "fontname": get_optional_kind(o,"fontname"),
-                  "word_margin": get_optional_kind(o,"word_margin"),
-                  "ncs": get_optional_kind(o,"ncs"),
-                  "text": _text,
-                  "pageid": get_optional_kind(o,"pageid"),
-                  "rotate": get_optional_kind(o,"rotate")  
-                }
-                div_infos.append(d)                
-                #print(_text)                
-                #print(dir(o))
-    else:
-        
-        #sys.exit()
-        if _text_kind in ['LTLine','LTRect']:
-            #print(_text)                
-            #print(dir(o))
-            #sys.exit()
-            # 處理一些方框、顏色...
-            d = {                  
-              "page_num": _page_num, 
-              "text_kind": _text_kind,
-              "bbox": my.explode(" ",my.trim(get_optional_bbox(o))),
-              "x0": float("%.2f" % ( get_optional_kind(o,"x0"))),
-              "y0": float("%.2f" % ( get_optional_kind(o,"y0"))),
-              "width": float("%.2f" % ( get_optional_kind(o,"width"))),
-              "height": float("%.2f" % ( get_optional_kind(o,"height"))),
-              "size": get_optional_kind(o,"size"),
-              "fontname": get_optional_kind(o,"fontname"),
-              "word_margin": get_optional_kind(o,"word_margin"),
-              "ncs": get_optional_kind(o,"ncs"),
-              "text": _text,
-              "pageid": get_optional_kind(o,"pageid"),
-              "rotate": get_optional_kind(o,"rotate"),
-              "fill": get_optional_kind(o,"fill"),
-              "stroke": get_optional_kind(o,"stroke"),
-              "stroking_color": get_optional_kind(o,"stroking_color"),
-              "linewidth": get_optional_kind(o,"linewidth"),
-              "non_stroking_color": get_optional_kind(o,"non_stroking_color"),
-              #"pts": get_optional_kind(o,"pts")  
-            }
-            div_infos.append(d)
-            #print(d)             
-            #sys.exit()        
-        elif _text_kind in ['LTImageGG']:
-            d = {                  
-              "page_num": _page_num, 
-              "text_kind": _text_kind,
-              "bbox": my.explode(" ",my.trim(get_optional_bbox(o))),
-              "x0": float("%.2f" % ( get_optional_kind(o,"x0"))),
-              "y0": float("%.2f" % ( get_optional_kind(o,"y0"))),
-              "width": float("%.2f" % ( get_optional_kind(o,"width"))),
-              "height": float("%.2f" % ( get_optional_kind(o,"height"))),
-              "size": get_optional_kind(o,"size"),
-              "fontname": get_optional_kind(o,"fontname"),
-              "word_margin": get_optional_kind(o,"word_margin"),
-              "ncs": get_optional_kind(o,"ncs"),
-              "text": _text,
-              "pageid": get_optional_kind(o,"pageid"),
-              "rotate": get_optional_kind(o,"rotate")  
-            }
-            img_info_infos.append(d)            
+logging.basicConfig()
 
-def get_indented_name(o: Any, depth: int) -> str:
-    """Indented name of LTItem"""
-    return '  ' * depth + o.__class__.__name__
+OUTPUT_TYPES = ((".htm", "html"), (".html", "html"), (".xml", "xml"), (".tag", "tag"))
 
 
-def get_optional_bbox(o: Any) -> str:
-    """Bounding box of LTItem if available, otherwise empty string"""
-    #print(dir(o))
-    if hasattr(o, 'bbox'):
-        return ''.join(f'{i:.2f} ' for i in o.bbox)
-    return ''
-def get_optional_kind(o: Any,kind) -> str:
-    """Bounding box of LTItem if available, otherwise empty string"""
-    #print(dir(o))
-    #sys.exit()
-    # from : https://stackoverflow.com/questions/13595690/getting-dynamic-attribute-in-python
-    try:
-        if hasattr(o, kind ):
-            #print(o)
-            v = getattr(o,kind)
-            if isinstance(v, list):
-                return "".join(f'{i} ' for i in v)
-            else:
-                return v 
-    except:
-        pass
-    return None
-# From : https://stackoverflow.com/questions/68891001/pdf-miner-how-to-extract-images    
-def get_image(layout_object):
-    if isinstance(layout_object, pdfminer.layout.LTImage):
-        return layout_object
-    if isinstance(layout_object, pdfminer.layout.LTContainer):
-        for child in layout_object:
-            return get_image(child)
-    else:
+def float_or_disabled(x: str) -> Optional[float]:
+    if x.lower().strip() == "disabled":
         return None
+    try:
+        return float(x)
+    except ValueError:
+        raise argparse.ArgumentTypeError("invalid float value: {}".format(x))
 
-def determine_image_type (stream_first_4_bytes):
-    """Find out the image file type based on the magic number comparison of the first 4 (or 2) bytes"""
-    # From : https://denis.papathanasiou.org/archive/2010.08.04.post.pdf
-    file_type = None
-    bytes_as_hex = b2a_hex(stream_first_4_bytes)
-    if bytes_as_hex.startswith(b'ffd8'):
-        file_type = '.jpeg'
-    elif bytes_as_hex == '89504e47':
-        file_type = ',png'
-    elif bytes_as_hex == '47494638':
-        file_type = '.gif'
-    elif bytes_as_hex.startswith(b'424d'):
-        file_type = '.bmp'
-    return file_type
-def write_file (folder, filename, filedata, flags='w'):
-    """Write the file data to the folder and filename combination
-    (flags: 'w' for write text, 'wb' for write binary, use 'a' instead of 'w' for append)"""
-    result = False
-    if os.path.isdir(folder):
-        try:
-            file_obj = open(os.path.join(folder, filename), flags)
-            file_obj.write(filedata)
-            file_obj.close()
-            result = True
-        except IOError:
-            pass
-    return result
-def blend_value(under, over, a):
-    return (over*a + under*(255-a)) / 255
 
-def blend_rgba(under, over):
-    return tuple([blend_value(under[i], over[i], over[3]) for i in (0,1,2)] + [255])
+def extract_text(
+    files: Iterable[str] = [],
+    outfile: str = "-",
+    laparams: Optional[LAParams] = None,
+    output_type: str = "text",
+    codec: str = "utf-8",
+    strip_control: bool = False,
+    maxpages: int = 0,
+    page_numbers: Optional[Container[int]] = None,
+    password: str = "",
+    scale: float = 1.0,
+    rotation: int = 0,
+    layoutmode: str = "normal",
+    output_dir: Optional[str] = None,
+    debug: bool = False,
+    disable_caching: bool = False,
+    **kwargs: Any
+) -> AnyIO:
+    if not files:
+        raise ValueError("Must provide files to work upon!")
 
-white = (255, 255, 255, 255)    
-def save_images_from_page(page: pdfminer.layout.LTPage,page_number):
-    global img_info_infos
-    global img_infos
-    images = list(filter(bool, map(get_image, page)))
-    #iw = ImageWriter('output_dir')
-    # from : https://github.com/pdfminer/pdfminer.six/issues/754
-    mp = map(get_image, page)
-    #print(len(mp))
-    #print(len(images))
-    #sys.exit()
-    global OUTPUT_PATH
-    OUTPUT_PIC_PATH = OUTPUT_PATH + my.SP() + "pic"
-    if my.is_dir(OUTPUT_PIC_PATH)==False:
-        my.mkdir(OUTPUT_PIC_PATH)
-    step = 1
-    for o in mp:
-        _text_kind = my.trim(get_indented_name(o, 0))
-        _text = get_optional_text(o)
-        try:  
-            d = {                  
-              "page_num": page_number, 
-              "text_kind": _text_kind,
-              "bbox": my.explode(" ",my.trim(get_optional_bbox(o))),
-              "x0": float("%.2f" % ( get_optional_kind(o,"x0"))),
-              "y0": float("%.2f" % ( get_optional_kind(o,"y0"))),
-              "width": float("%.2f" % ( get_optional_kind(o,"width"))),
-              "height": float("%.2f" % ( get_optional_kind(o,"height"))),
-              "size": get_optional_kind(o,"size"),
-              "fontname": get_optional_kind(o,"fontname"),
-              "word_margin": get_optional_kind(o,"word_margin"),
-              "ncs": get_optional_kind(o,"ncs"),
-              "text": _text,
-              "pageid": get_optional_kind(o,"pageid"),
-              "rotate": get_optional_kind(o,"rotate"),
-                
-            }
-            img_info_infos.append(d)
-        except:
-            pass
-        #print(d)
-    #sys.exit()
-    
-    #img_info = []
-    for image in images:
-        iw = ImageWriter(OUTPUT_PIC_PATH)
-        #if len(image.colorspace) == 1 and isinstance(image.colorspace[0], PDFObjRef):
-        #    image.colorspace = resolve_all(image.colorspace[0])
-        #    if not isinstance(image.colorspace, list):
-        #        image.colorspace = [ image.colorspace ]
-        #print(f'{image=}')
-        #print(f'{image.colorspace=}')
-        #print(image)
-        #print(dir(image))
-        # From : https://stackoverflow.com/questions/38317327/python-pdfminer-extract-image-produces-multiple-images-per-page-should-be-singl
-        
-        im = None
-        try:  
-            im = Image.open(io.BytesIO(image.stream.get_data()))
-            
-        except:
-            #continue
-            pass
-        #print(im.format)
-        #print(page)
-        #sys.exit()
-        d = {
-          "file_name": str(page_number) + "_" + str(step) + ".png",
-          "page_num": page_number,
-          "x": image.x0,
-          "y": image.y0,
-          "w": image.width,
-          "h": image.height 
-        }
-        #print(d)
-        img_infos.append(d)
-        #im.save(OUTPUT_PIC_PATH + my.SP() + d["file_name"]);
-        #print(im.mode)
-        #sys.exit()
-        #try:
-            
-        if im!=None and im.mode == 'CMYK':
-            im = im.convert('RGBA')
-            x = np.array(im)
-            r, g, b, a = np.rollaxis(x, axis = -1)
-            r[a == 0] = 255
-            g[a == 0] = 255
-            b[a == 0] = 255
-            x = np.dstack([r, g, b, a])
-            im = Image.fromarray(x, 'RGBA')
-            im = im.convert('RGB')
-            im = ImageOps.invert(im)
-            im.save(OUTPUT_PIC_PATH + my.SP() + d["file_name"], "PNG", optimize=True)
-        elif im!=None:
-            im = im.convert('RGBA')            
-            im.save(OUTPUT_PIC_PATH + my.SP() + d["file_name"], "PNG", optimize=True)
-        elif isinstance(image, pdfminer.layout.LTImage):
-            
-            name = iw.export_image(image)            
-            my.rename(OUTPUT_PIC_PATH + my.SP() + name,OUTPUT_PIC_PATH + my.SP() + d["file_name"])
-            #print(name)
-            #sys.exit()
-        
-        step = step + 1      
-    #sys.exit()
-    #return img_info    
-        
-def get_optional_text(o: Any) -> str:
-    """Text of LTItem if available, otherwise empty string"""
-    if hasattr(o, 'get_text'):
-        return o.get_text().strip()
-    return ''
+    if output_type == "text" and outfile != "-":
+        for override, alttype in OUTPUT_TYPES:
+            if outfile.endswith(override):
+                output_type = alttype
 
-message = """
-  PDF to html
-  Author: FeatherMountain ( https://3wa.tw )
-  
-  Usage:
-    python3 pdfToHtml.py sample.pdf [output_path]
-    
-"""
+    if outfile == "-":
+        outfp: AnyIO = sys.stdout
+        if sys.stdout.encoding is not None:
+            codec = "utf-8"
+    else:
+        outfp = open(outfile, "wb")
 
-if len(sys.argv) < 2 or my.is_file(sys.argv[1]) == False or my.strtolower(my.subname(sys.argv[1]))!="pdf":
-    print(message);
-    sys.exit()
+    for fname in files:
+        with open(fname, "rb") as fp:
+            pdfminer.high_level.extract_text_to_fp(fp, **locals())
+    return outfp
 
-OUTPUT_PATH = my.mainname(sys.argv[1])
 
-if len(sys.argv) > 2:
-  OUTPUT_PATH = my.mainname(sys.argv[2])
+def create_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, add_help=True)
+    parser.add_argument(
+        "files",
+        type=str,
+        default=None,
+        nargs="+",
+        help="One or more paths to PDF files.",
+    )
 
-if my.is_dir(OUTPUT_PATH)==False:
-    my.mkdir(OUTPUT_PATH) 
+    parser.add_argument(
+        "--version",
+        "-v",
+        action="version",
+        version="pdfminer.six v{}".format(pdfminer.__version__),
+    )
+    parser.add_argument(
+        "--debug",
+        "-d",
+        default=False,
+        action="store_true",
+        help="Use debug logging level.",
+    )
+    parser.add_argument(
+        "--disable-caching",
+        "-C",
+        default=False,
+        action="store_true",
+        help="If caching or resources, such as fonts, should be disabled.",
+    )
 
-path = Path(sys.argv[1]).expanduser()
+    parse_params = parser.add_argument_group(
+        "Parser", description="Used during PDF parsing"
+    )
+    parse_params.add_argument(
+        "--page-numbers",
+        type=int,
+        default=None,
+        nargs="+",
+        help="A space-seperated list of page numbers to parse.",
+    )
+    parse_params.add_argument(
+        "--pagenos",
+        "-p",
+        type=str,
+        help="A comma-separated list of page numbers to parse. "
+        "Included for legacy applications, use --page-numbers "
+        "for more idiomatic argument entry.",
+    )
+    parse_params.add_argument(
+        "--maxpages",
+        "-m",
+        type=int,
+        default=0,
+        help="The maximum number of pages to parse.",
+    )
+    parse_params.add_argument(
+        "--password",
+        "-P",
+        type=str,
+        default="",
+        help="The password to use for decrypting PDF file.",
+    )
+    parse_params.add_argument(
+        "--rotation",
+        "-R",
+        default=0,
+        type=int,
+        help="The number of degrees to rotate the PDF "
+        "before other types of processing.",
+    )
 
-pages_img = list(extract_pages(path))
-pages = extract_pages(path)
-#print(pages)
-#sys.exit()
-show_ltitem_hierarchy(pages)
+    la_params = LAParams()  # will be used for defaults
+    la_param_group = parser.add_argument_group(
+        "Layout analysis", description="Used during layout analysis."
+    )
+    la_param_group.add_argument(
+        "--no-laparams",
+        "-n",
+        default=False,
+        action="store_true",
+        help="If layout analysis parameters should be ignored.",
+    )
+    la_param_group.add_argument(
+        "--detect-vertical",
+        "-V",
+        default=la_params.detect_vertical,
+        action="store_true",
+        help="If vertical text should be considered during layout analysis",
+    )
+    la_param_group.add_argument(
+        "--line-overlap",
+        type=float,
+        default=la_params.line_overlap,
+        help="If two characters have more overlap than this they "
+        "are considered to be on the same line. The overlap is specified "
+        "relative to the minimum height of both characters.",
+    )
+    la_param_group.add_argument(
+        "--char-margin",
+        "-M",
+        type=float,
+        default=la_params.char_margin,
+        help="If two characters are closer together than this margin they "
+        "are considered to be part of the same line. The margin is "
+        "specified relative to the width of the character.",
+    )
+    la_param_group.add_argument(
+        "--word-margin",
+        "-W",
+        type=float,
+        default=la_params.word_margin,
+        help="If two characters on the same line are further apart than this "
+        "margin then they are considered to be two separate words, and "
+        "an intermediate space will be added for readability. The margin "
+        "is specified relative to the width of the character.",
+    )
+    la_param_group.add_argument(
+        "--line-margin",
+        "-L",
+        type=float,
+        default=la_params.line_margin,
+        help="If two lines are close together they are considered to "
+        "be part of the same paragraph. The margin is specified "
+        "relative to the height of a line.",
+    )
+    la_param_group.add_argument(
+        "--boxes-flow",
+        "-F",
+        type=float_or_disabled,
+        default=la_params.boxes_flow,
+        help="Specifies how much a horizontal and vertical position of a "
+        "text matters when determining the order of lines. The value "
+        "should be within the range of -1.0 (only horizontal position "
+        "matters) to +1.0 (only vertical position matters). You can also "
+        "pass `disabled` to disable advanced layout analysis, and "
+        "instead return text based on the position of the bottom left "
+        "corner of the text box.",
+    )
+    la_param_group.add_argument(
+        "--all-texts",
+        "-A",
+        default=la_params.all_texts,
+        action="store_true",
+        help="If layout analysis should be performed on text in figures.",
+    )
 
-text_json = my.json_format_utf8(my.json_encode_utf8(text_infos))
-img_json = my.json_format_utf8(my.json_encode_utf8(img_infos))
-img_info_json = my.json_format_utf8(my.json_encode_utf8(img_info_infos))
-div_json = my.json_format_utf8(my.json_encode_utf8(div_infos))
+    output_params = parser.add_argument_group(
+        "Output", description="Used during output generation."
+    )
+    output_params.add_argument(
+        "--outfile",
+        "-o",
+        type=str,
+        default="-",
+        help="Path to file where output is written. "
+        'Or "-" (default) to write to stdout.',
+    )
+    output_params.add_argument(
+        "--output_type",
+        "-t",
+        type=str,
+        default="text",
+        help="Type of output to generate {text,html,xml,tag}.",
+    )
+    output_params.add_argument(
+        "--codec",
+        "-c",
+        type=str,
+        default="utf-8",
+        help="Text encoding to use in output file.",
+    )
+    output_params.add_argument(
+        "--output-dir",
+        "-O",
+        default=None,
+        help="The output directory to put extracted images in. If not given, "
+        "images are not extracted.",
+    )
+    output_params.add_argument(
+        "--layoutmode",
+        "-Y",
+        default="normal",
+        type=str,
+        help="Type of layout to use when generating html "
+        "{normal,exact,loose}. If normal,each line is"
+        " positioned separately in the html. If exact"
+        ", each character is positioned separately in"
+        " the html. If loose, same result as normal "
+        "but with an additional newline after each "
+        "text line. Only used when output_type is html.",
+    )
+    output_params.add_argument(
+        "--scale",
+        "-s",
+        type=float,
+        default=1.0,
+        help="The amount of zoom to use when generating html file. "
+        "Only used when output_type is html.",
+    )
+    output_params.add_argument(
+        "--strip-control",
+        "-S",
+        default=False,
+        action="store_true",
+        help="Remove control statement from text. "
+        "Only used when output_type is xml.",
+    )
 
-#print(text_json)
-print(img_json)
-#print(div_json)
+    return parser
 
-my.file_put_contents(OUTPUT_PATH+my.SP()+"text.js","text_json="+text_json+";")
-my.file_put_contents(OUTPUT_PATH+my.SP()+"img.js","img_json="+img_json+";")
-my.file_put_contents(OUTPUT_PATH+my.SP()+"img_info.js","img_info_json="+img_info_json+";")
-my.file_put_contents(OUTPUT_PATH+my.SP()+"div.js","div_json="+div_json+";")
+
+def parse_args(args: Optional[List[str]]) -> argparse.Namespace:
+    parsed_args = create_parser().parse_args(args=args)
+
+    # Propagate parsed layout parameters to LAParams object
+    if parsed_args.no_laparams:
+        parsed_args.laparams = None
+    else:
+        parsed_args.laparams = LAParams(
+            line_overlap=parsed_args.line_overlap,
+            char_margin=parsed_args.char_margin,
+            line_margin=parsed_args.line_margin,
+            word_margin=parsed_args.word_margin,
+            boxes_flow=parsed_args.boxes_flow,
+            detect_vertical=parsed_args.detect_vertical,
+            all_texts=parsed_args.all_texts,
+        )
+
+    if parsed_args.page_numbers:
+        parsed_args.page_numbers = {x - 1 for x in parsed_args.page_numbers}
+
+    if parsed_args.pagenos:
+        parsed_args.page_numbers = {int(x) - 1 for x in parsed_args.pagenos.split(",")}
+
+    if parsed_args.output_type == "text" and parsed_args.outfile != "-":
+        for override, alttype in OUTPUT_TYPES:
+            if parsed_args.outfile.endswith(override):
+                parsed_args.output_type = alttype
+
+    return parsed_args
+
+
+def main(args: Optional[List[str]] = None) -> int:
+    parsed_args = parse_args(args)
+    outfp = extract_text(**vars(parsed_args))
+    outfp.close()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
